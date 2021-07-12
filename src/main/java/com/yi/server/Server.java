@@ -2,34 +2,51 @@ package com.yi.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
+import java.util.Iterator;
+import java.util.Set;
 
 public class Server {
+    private ServerSocketChannel serverSocketChannel;
+    private Selector selector;
+    private TCPSelector tcpSelector;
+
     public static void main(String[] args) {
-        start("127.0.0.1", 50101);
+        Server server = new Server();
+        server.start("127.0.0.1", 50101);
     }
 
-    public static void start(String ip, int port) {
+    private void start(String ip, int port) {
+
         try {
-            ServerSocketChannel socketChannel = ServerSocketChannel.open();
-            socketChannel.configureBlocking(true);
-            socketChannel.bind(new InetSocketAddress(ip, port));
+            this.serverSocketChannel = ServerSocketChannel.open();
+            this.serverSocketChannel.configureBlocking(false);
+            this.serverSocketChannel.bind(new InetSocketAddress(ip, port));
+            selector = Selector.open();
+            tcpSelector = new TCPSelector();
+            this.serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
             while (true) {
-                SocketChannel clientSocket = socketChannel.accept();
-                ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-                int read = clientSocket.read(byteBuffer);
-                byteBuffer.flip();
-                int remaining = byteBuffer.remaining();
-                if (remaining > 0) {
-                    byte[] result = new byte[1024];
-                    byteBuffer.get(result, 0, remaining);
-                    System.out.println("Server reading:" + new String(result));
+                int selectNum = selector.select();
+                if (selectNum != 0) {
+                    Set<SelectionKey> selectionKeys = selector.selectedKeys();
+                    Iterator<SelectionKey> iterator = selectionKeys.iterator();
+                    while (iterator.hasNext()) {
+                        SelectionKey selectionKey = iterator.next();
+                        ServerSocketChannel serverSocketChannel = (ServerSocketChannel) selectionKey.channel();
+                        iterator.remove();
+                        SocketChannel socketChannel = serverSocketChannel.accept();
+                        tcpSelector.register(socketChannel);
+                        tcpSelector.select();
+                    }
                 }
+
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void close() {
+
     }
 }

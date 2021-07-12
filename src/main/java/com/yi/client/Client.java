@@ -1,4 +1,4 @@
-package com.yi.server;
+package com.yi.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -20,9 +20,6 @@ public class Client {
             }
             ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
             byte[] bytes = "Hello SimpleServer".getBytes();
-            for (byte aByte : bytes) {
-                System.out.print(aByte);
-            }
             byteBuffer.put(bytes);
             byteBuffer.flip();
             socketChannel.write(byteBuffer);
